@@ -13,12 +13,37 @@ const Jobs = () => {
 
     useEffect(() => {
         if (searchedQuery) {
-            const filteredJobs = allJobs.filter((job) => {
-                return job.title.toLowerCase().includes(searchedQuery.toLowerCase()) ||
-                    job.description.toLowerCase().includes(searchedQuery.toLowerCase()) ||
-                    job.location.toLowerCase().includes(searchedQuery.toLowerCase())
-            })
-            setFilterJobs(filteredJobs)
+            // Check if it's a salary filter
+            const isSalaryFilter = searchedQuery.includes("₹");
+            
+            if (isSalaryFilter) {
+                // Parse salary range (e.g., "₹500000-₹1000000" or "₹1500000+")
+                let minSalary = 0;
+                let maxSalary = Infinity;
+                
+                if (searchedQuery.includes("+")) {
+                    // Handle "₹1500000+" format
+                    minSalary = parseInt(searchedQuery.replace("₹", "").replace("+", "")) || 0;
+                } else {
+                    // Handle "₹0-₹500000" format
+                    const parts = searchedQuery.split("-");
+                    minSalary = parseInt(parts[0].replace("₹", "")) || 0;
+                    maxSalary = parseInt(parts[1].replace("₹", "")) || Infinity;
+                }
+                
+                const filteredJobs = allJobs.filter((job) => {
+                    return job.salary >= minSalary && job.salary <= maxSalary;
+                });
+                setFilterJobs(filteredJobs);
+            } else {
+                // Text search filter for location, title, description, role
+                const filteredJobs = allJobs.filter((job) => {
+                    return job.title.toLowerCase().includes(searchedQuery.toLowerCase()) ||
+                        job.description.toLowerCase().includes(searchedQuery.toLowerCase()) ||
+                        job.location.toLowerCase().includes(searchedQuery.toLowerCase())
+                })
+                setFilterJobs(filteredJobs);
+            }
         } else {
             setFilterJobs(allJobs)
         }

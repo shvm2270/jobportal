@@ -19,7 +19,12 @@ const useGetAllJobs = () => {
             }
         }
         fetchAllJobs();
-    },[])
+        
+        // Refetch jobs every 10 seconds to show newly posted jobs in real-time
+        const interval = setInterval(fetchAllJobs, 10000);
+        
+        return () => clearInterval(interval);
+    },[searchedQuery, dispatch])
 }
 
 export default useGetAllJobs
