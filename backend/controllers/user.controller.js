@@ -100,13 +100,15 @@ export const login = async (req, res) => {
             profile: user.profile
         }
 
-        // set cookie with correct option name httpOnly; set secure in production
+        // For cross-site auth (Vercel frontend + Render backend), production cookies
+        // must use SameSite=None and Secure=true.
+        const isProduction = process.env.NODE_ENV === "production";
         const cookieOptions = {
             maxAge: 1 * 24 * 60 * 60 * 1000,
             httpOnly: true,
-            sameSite: 'strict',
+            sameSite: isProduction ? "none" : "lax",
+            secure: isProduction,
         };
-        if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
 
         return res.status(200).cookie("token", token, cookieOptions).json({
             message: `Welcome back ${user.fullname}`,
@@ -123,7 +125,13 @@ export const login = async (req, res) => {
 }
 export const logout = async (req, res) => {
     try {
-        return res.status(200).cookie("token", "", { maxAge: 0 }).json({
+        const isProduction = process.env.NODE_ENV === "production";
+        return res.status(200).cookie("token", "", {
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: isProduction ? "none" : "lax",
+            secure: isProduction,
+        }).json({
             message: "Logged out successfully.",
             success: true
         })

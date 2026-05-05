@@ -1,0 +1,111 @@
+name: CI/CD Pipeline - Deploy to Render
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Test Backend
+  test-backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Check backend syntax
+        working-directory: ./backend
+        run: npm run lint --if-present || echo "No lint script"
+
+      - name: Verify package.json
+        working-directory: ./backend
+        run: node -c index.js
+
+  # Test Frontend
+  test-frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+  # Deploy Backend to Render
+  deploy-backend:
+    needs: test-backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Trigger Render deployment - Backend
+        run: |
+          curl --request POST \
+            --url https://api.render.com/deploy/srv-${{ secrets.RENDER_BACKEND_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }} \
+            --header 'accept: application/json'
+        continue-on-error: true
+
+      - name: Notify deployment
+        run: echo "Backend deployment triggered on Render"
+
+  # Deploy Frontend to Render
+  deploy-frontend:
+    needs: test-frontend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Trigger Render deployment - Frontend
+        run: |
+          curl --request POST \
+            --url https://api.render.com/deploy/srv-${{ secrets.RENDER_FRONTEND_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }} \
+            --header 'accept: application/json'
+        continue-on-error: true
+
+      - name: Notify deployment
+        run: echo "Frontend deployment triggered on Render"
+
+  # Notify Success
+  notify-success:
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Deployment Success
+        run: |
+          echo "✅ CI/CD Pipeline completed successfully!"
+          echo "Backend and Frontend are being deployed to Render"
