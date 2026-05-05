@@ -16,5 +16,5 @@ COPY . .
 # Expose backend port
 EXPOSE 3000
 
-# Start server using dev script
-CMD ["npm", "run", "dev"]
+# Start server using production script
+CMD ["npm", "start"]

@@ -37,7 +37,7 @@ pids/
 *.pid.lock
 
 # Docker
-.dockerignore
+# .dockerignore removed to allow commits
 
 # Testing
 coverage/
